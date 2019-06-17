@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SWINGS
 {
@@ -19,6 +20,8 @@ namespace SWINGS
     /// </summary>
     public partial class MainWindow : Window
     {
+        DispatcherTimer timer = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 0, 0, 5) }; // 1 секунда
+
         Coordinate[] coordinates = new Coordinate[]
         {
             #region gr1_0 - gr1_11
@@ -204,8 +207,8 @@ namespace SWINGS
             #endregion
 
 
-            new Coordinate(715, 200, 30, 
-                           725,200,30),
+            new Coordinate(720, 200, 30, 
+                           720,200,30),
 
 
             // Координаты-помощники
@@ -216,21 +219,18 @@ namespace SWINGS
             new Coordinate(100, 500, 0,
                            100, 500, 80)
         }; // массив координат всех линий
+
         Vector vector = new Vector(715.0, 320.0); // вектор поворота модели
-        
-        
 
-        double[] fulcrumCoordinates = new double[] { 715.0, 200.0, 30 }; // точка вращения модели
-        Vector fulcrum = new Vector(715.0, 200.0); // точка вращения качелей (процесс качания)
+        double Z_Zero, Y_Zero;
 
+        double StartPosY, EndPosY, NewPosY;
 
-        MyMatrix SwingingMat = new MyMatrix(1, 0, 0,
-                                            0, 1, 0,
-                                            0, 0, 1);
 
         MyMatrix PointRotation = new MyMatrix(1, 0, 0,
                                               0, 1, 0,
                                               0, 0, 1);
+
 
 
         public MainWindow()
@@ -238,15 +238,16 @@ namespace SWINGS
             InitializeComponent();
         }
 
+
         // кнопки
         private void WindowKeyDown(object sender, KeyEventArgs e)
         {
-            // считываем клавишу и взависимости от неё крутим качели по X,Y,Z
+            // считываем клавишу и в зависимости от неё крутим качели по X,Y,Z
+            
             switch (e.Key)
             {
                 case Key.W:
                     RotateElementX(-0.03, vector);
-                    
                     break;
 
                 case Key.S:
@@ -268,8 +269,6 @@ namespace SWINGS
                 case Key.E:
                     RotateElementZ(-0.03, vector);
                     break;
-                
-
             }
         }
 
@@ -299,21 +298,20 @@ namespace SWINGS
 
                 helperX, helperY, helperZ
             };
-
+            
             double x1, y1, z1, x2, y2, z2;
             double Xx1, Xx2, Yy1, Yy2, Zz1, Zz2;
 
-            MyMatrix X_Matrix = new MyMatrix(1,  0,                0,
-                                             0,  Math.Cos(alpha),  Math.Sin(alpha),
-                                             0,  -Math.Sin(alpha), Math.Cos(alpha));
+            MyMatrix X_Matrix = new MyMatrix(1, 0, 0,
+                                              0, Math.Cos(alpha), Math.Sin(alpha),
+                                              0, -Math.Sin(alpha), Math.Cos(alpha));
+
 
             PointRotation *= X_Matrix;
-            //SwingingMat *= PointRotation;
 
 
             for (int i = 0; i < coordinates.Length; i++)
             {
-
                 // x1, y1, z1, x2, y2, z2 - изначальные координаты со смещением на vec
                 // vec - вектор, относительно которой крутим фигуру (начало координат)
                 
@@ -338,8 +336,7 @@ namespace SWINGS
 
 
                 //--------------------------------------------------------------------------- расчёт точек в 3D
-
-
+                
                 MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
                 MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
 
@@ -370,43 +367,18 @@ namespace SWINGS
 
                 // подстановка новых координат к точкам линий
                 // d1, d2, z1, z2 = 0
+
+                
                 lines[i].X1 = Xx1;
                 lines[i].Y1 = Yy1;
 
                 lines[i].X2 = Xx2;
                 lines[i].Y2 = Yy2;
 
-
-                //---------------------- изменение изначальных
                 
-                //---------------------- изменение изначальных
             }
 
 
-            x1 = fulcrum.X - vec.X;
-            y1 = fulcrum.Y - vec.Y;
-            z1 = fulcrumCoordinates[2];
-
-            MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
-
-            Xx1 = x1; Yy1 = y1; Zz1 = z1;
-
-            Xx1 += vec.X;
-            Yy1 += vec.Y;
-            
-
-            //fulcrumCoordinates[0] = Xx1;
-            //fulcrumCoordinates[1] = Yy1;
-            //fulcrumCoordinates[2] = Zz1;
-
-            //fulcrum.X = Xx1;
-            //fulcrum.Y = Yy1;
-
-            Ordinates.Foreground = Brushes.White;
-            Ordinates.Text = $"fulcrumCoordinates: {Math.Round(fulcrumCoordinates[0], 1)}; {Math.Round(fulcrumCoordinates[1], 1)}; {Math.Round(fulcrumCoordinates[2], 1)}\n" +
-                $"fulcrum: {Math.Round(vec.X, 1)}; {Math.Round(vec.Y, 1)}\n" +
-                $"p-oint: {Math.Round(fulc.X1, 1)}; {Math.Round(fulc.Y1, 1)}" +
-                $"vector: {Math.Round(vector.X, 1)}; {Math.Round(vector.Y, 1)}";
 
         }
 
@@ -414,19 +386,18 @@ namespace SWINGS
         /// <summary>
         /// ПОВОРОТ ОТНОСИТЕЛЬНО Y
         /// </summary>
-        /// <param name="grok">Линия, которую следует повернуть</param>
+        /// <param name="grok">Линия, которую следует повернуть</param> 
         private void RotateElementY(double alpha, Vector vec)
         {
             double x1, y1, z1, x2, y2, z2;
             double Xx1, Xx2, Yy1, Yy2, Zz1, Zz2;
 
-            MyMatrix Y_Matrix = new MyMatrix(Math.Cos(alpha), 0, -Math.Sin(alpha),
-                                             0,               1,                0,
-                                             Math.Sin(alpha), 0, Math.Cos(alpha));
+            MyMatrix MatrixY = new MyMatrix(Math.Cos(alpha), 0, -Math.Sin(alpha),
+                                            0,               1,               0,
+                                            Math.Sin(alpha), 0, Math.Cos(alpha));
 
-            PointRotation *= Y_Matrix;
-            //SwingingMat *= PointRotation;
 
+            PointRotation *= MatrixY;
 
             List<Line> lines = new List<Line>()
             {
@@ -472,8 +443,12 @@ namespace SWINGS
 
 
                 //--------------------------------------------------------------------------- расчёт точек в 3D
+
+                
+
                 MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
                 MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
+                
 
                 Xx1 = x1; Yy1 = y1; Zz1 = z1;
                 Xx2 = x2; Yy2 = y2; Zz2 = z2;
@@ -506,38 +481,9 @@ namespace SWINGS
                 lines[i].X2 = Xx2;
                 lines[i].Y2 = Yy2;
 
-                //---------------------- изменение изначальных
-                
-                //---------------------- изменение изначальных
-
             }
 
 
-            x1 = fulcrum.X - vec.X;
-            y1 = fulcrum.Y - vec.Y;
-            z1 = fulcrumCoordinates[2];
-
-            MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
-
-            Xx1 = x1; Yy1 = y1; Zz1 = z1;
-
-
-            Xx1 += vec.X;
-            Yy1 += vec.Y;
-
-
-            //fulcrumCoordinates[0] = Xx1;
-            //fulcrumCoordinates[1] = Yy1;
-            //fulcrumCoordinates[2] = Zz1;
-
-            //fulcrum.X = Xx1;
-            //fulcrum.Y = Yy1;
-
-            Ordinates.Foreground = Brushes.White;
-            Ordinates.Text = $"fulcrumCoordinates: {Math.Round(fulcrumCoordinates[0], 1)}; {Math.Round(fulcrumCoordinates[1], 1)}; {Math.Round(fulcrumCoordinates[2], 1)}\n" +
-                $"fulcrum: {Math.Round(vec.X, 1)}; {Math.Round(vec.Y, 1)}\n" +
-                $"p-oint: {Math.Round(fulc.X1, 1)}; {Math.Round(fulc.Y1, 1)}" +
-                $"vector: {Math.Round(vector.X, 1)}; {Math.Round(vector.Y, 1)}";
         }
 
         // СДЕЛАНО
@@ -562,14 +508,14 @@ namespace SWINGS
             };
 
             double x1, y1, z1, x2, y2, z2, Z;
-            double Xx1, Xx2, Yy1, Yy2, Zz1, Zz2, Xx, Yy, Zz;
+            double Xx1, Xx2, Yy1, Yy2, Zz1, Zz2;
 
             MyMatrix Z_Matrix = new MyMatrix(Math.Cos(alpha),  Math.Sin(alpha), 0,
                                              -Math.Sin(alpha), Math.Cos(alpha), 0,
                                              0,                0,               1);
 
+
             PointRotation *= Z_Matrix;
-            //SwingingMat *= PointRotation;
 
 
             for (int i = 0; i < coordinates.Length; i++)
@@ -599,6 +545,8 @@ namespace SWINGS
 
 
                 //--------------------------------------------------------------------------- расчёт точек в 3D
+                
+                               
                 MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
                 MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
 
@@ -632,92 +580,74 @@ namespace SWINGS
                 lines[i].X2 = Xx2;
                 lines[i].Y2 = Yy2;
 
-                //---------------------- изменение изначальных
-                
-                //---------------------- изменение изначальных
                 
             }
 
-            x1 = fulcrum.X - vec.X;
-            y1 = fulcrum.Y - vec.Y;
-            z1 = fulcrumCoordinates[2];
-
-            //             
-            MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
-
-            Xx1 = x1; Yy1 = y1; Zz1 = z1;
-            //
-
-            Xx1 += vec.X;
-            Yy1 += vec.Y;
-
-            //fulcrumCoordinates[0] = Xx1;
-            //fulcrumCoordinates[1] = Yy1;
-            //fulcrumCoordinates[2] = Zz1;
-
-            //fulcrum.X = Xx1;
-            //fulcrum.Y = Yy1;
-
-
-            Ordinates.Foreground = Brushes.White;
-            Ordinates.Text = $"fulcrumCoordinates: {Math.Round(fulcrumCoordinates[0], 1)}; {Math.Round(fulcrumCoordinates[1], 1)}; {Math.Round(fulcrumCoordinates[2], 1)}\n" +
-                $"fulcrum: {Math.Round(vec.X, 1)}; {Math.Round(vec.Y, 1)}\n" +
-                $"p-oint: {Math.Round(fulc.X1, 1)}; {Math.Round(fulc.Y1, 1)}" +
-                $"vector: {Math.Round(vector.X, 1)}; {Math.Round(vector.Y, 1)}";
 
         }
         #endregion
 
 
 
-        private void SwingX(double alpha, ref Vector vec)
+        private void SwingX(double alpha)
         {
             List<Line> lines = new List<Line>()
             {
                 gr4_00, gr4_01, gr4_02, gr4_03, gr4_04, gr4_05, gr4_06, gr4_07, gr4_08, gr4_09, gr4_10, gr4_11,
                 gr5_00, gr5_01, gr5_02, gr5_03, gr5_04, gr5_05, gr5_06, gr5_07, gr5_08, gr5_09, gr5_10, gr5_11,
-                gr6_00, gr6_01, gr6_02, gr6_03, gr6_04, gr6_05, gr6_06, gr6_07, gr6_08, gr6_09, gr6_10, gr6_11, fulc
+                gr6_00, gr6_01, gr6_02, gr6_03, gr6_04, gr6_05, gr6_06, gr6_07, gr6_08, gr6_09, gr6_10, gr6_11,
+
+                fulc
             };
 
             double x1, y1, z1, x2, y2, z2;
             double Xx1, Xx2, Yy1, Yy2, Zz1, Zz2;
 
-            
-            MyMatrix X_Matrix = new MyMatrix(1, 0, 0,
+            MyMatrix X_Matrix = new MyMatrix(1,               0,               0,
                                              0, Math.Cos(alpha), Math.Sin(alpha),
                                              0, -Math.Sin(alpha), Math.Cos(alpha));
 
-            SwingingMat = X_Matrix;
+            double X = 720.0,
+                   Y = 200.0,
+                   Z = 30.0;
 
-            fulc.X1 = vec.X;
-            fulc.Y1 = vec.Y;
-            fulc.X2 = vec.X+0.1;
-            fulc.Y2 = vec.Y+0.1;
+            Line lnk = new Line()
+            {
+                Height = 700,
+                Width = 1100,
+                Stroke = Brushes.MediumPurple,
+                StrokeThickness = 10,
+                X1 = 715,
+                Y1 = 200,
+                X2 = 725,
+                Y2 = 200
+            };
 
+            myCanvas.Children.Add(lnk);
 
-            // SwingMat
-            for (int i = 36, k = 0; i < coordinates.Length - 4; i++, k++)
+            
+            // SwingMat (поворот)
+            for (int i = 36, k = 0; i < coordinates.Length - 3; i++, k++)
             {
 
                 // x1, y1, z1, x2, y2, z2 - изначальные координаты со смещением на vec
                 // vec - вектор, относительно которой крутим фигуру (начало координат)
 
-                x1 = coordinates[i].X1 - vec.X;
-                y1 = coordinates[i].Y1 - vec.Y;
-                z1 = coordinates[i].Z1 - 30;
-                x2 = coordinates[i].X2 - vec.X;
-                y2 = coordinates[i].Y2 - vec.Y;
-                z2 = coordinates[i].Z2 - 30;
+                x1 = coordinates[i].X1 - X;
+                y1 = coordinates[i].Y1 - Y;
+                z1 = coordinates[i].Z1 - Z;
+                x2 = coordinates[i].X2 - X;
+                y2 = coordinates[i].Y2 - Y;
+                z2 = coordinates[i].Z2 - Z;
 
                 //--------------------------------------------------------------------------- расчёт точек в 3D
 
-
-                MultiplyVector(ref x1, ref y1, ref z1, SwingingMat);
+                MultiplyVector(ref x1, ref y1, ref z1, X_Matrix);
                 //MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
 
-                MultiplyVector(ref x2, ref y2, ref z2, SwingingMat);
-                //MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
 
+                MultiplyVector(ref x2, ref y2, ref z2, X_Matrix);
+                //MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
 
 
                 Xx1 = x1; Yy1 = y1; Zz1 = z1;
@@ -728,12 +658,12 @@ namespace SWINGS
 
                 // смещение на vec (к исходной точке)
 
-                Xx1 += vec.X;
-                Yy1 += vec.Y;
-                Zz1 += 30;
-                Xx2 += vec.X;
-                Yy2 += vec.Y;
-                Zz2 += 30;
+                Xx1 += X;
+                Yy1 += Y;
+                Zz1 += Z;
+                Xx2 += X;
+                Yy2 += Y;
+                Zz2 += Z;
 
                 // смещение на vec (к исходной точке)
 
@@ -744,105 +674,137 @@ namespace SWINGS
                 coordinates[i].X2 = Xx2;
                 coordinates[i].Y2 = Yy2;
                 coordinates[i].Z2 = Zz2;
-                //---------------------- изменение изначальных
-                //lines[k].X1 = Xx1;
-                //lines[k].Y1 = Yy1;
 
-                //lines[k].X2 = Xx2;
-                //lines[k].Y2 = Yy2;
+                //---------------------- изменение изначальных
+                
+                
             }
 
+            Z_Zero = coordinates[36].Z1;
+            Y_Zero = coordinates[36].Y1;
 
-
-
-            // PointRotation
-            for (int i = 36, k = 0; i < coordinates.Length - 4; i++, k++)
-            {
-
-                // x1, y1, z1, x2, y2, z2 - изначальные координаты со смещением на vec
-                // vec - вектор, относительно которой крутим фигуру (начало координат)
-
-                x1 = coordinates[i].X1 - vec.X;
-                y1 = coordinates[i].Y1 - vec.Y;
-                z1 = coordinates[i].Z1 - 30;
-                x2 = coordinates[i].X2 - vec.X;
-                y2 = coordinates[i].Y2 - vec.Y;
-                z2 = coordinates[i].Z2 - 30;
-
-                //--------------------------------------------------------------------------- расчёт точек в 3D
-
-
-                MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
-                //MultiplyVector(ref x1, ref y1, ref z1, PointRotation);
-
-                MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
-                //MultiplyVector(ref x2, ref y2, ref z2, PointRotation);
-
-
-
-                Xx1 = x1; Yy1 = y1; Zz1 = z1;
-                Xx2 = x2; Yy2 = y2; Zz2 = z2;
-
-                //--------------------------------------------------------------------------- расчёт точек в 3D
-
-
-                // смещение на vec (к исходной точке)
-
-                Xx1 += vec.X;
-                Yy1 += vec.Y;
-                Zz1 += 30;
-                Xx2 += vec.X;
-                Yy2 += vec.Y;
-                Zz2 += 30;
-
-                // смещение на vec (к исходной точке)
-
-                //---------------------- изменение изначальных
-                //coordinates[i].X1 = Xx1;
-                //coordinates[i].Y1 = Yy1;
-                //coordinates[i].Z1 = Zz1;
-                //coordinates[i].X2 = Xx2;
-                //coordinates[i].Y2 = Yy2;
-                //coordinates[i].Z2 = Zz2;
-                //---------------------- изменение изначальных
-                lines[k].X1 = Xx1;
-                lines[k].Y1 = Yy1;
-
-                lines[k].X2 = Xx2;
-                lines[k].Y2 = Yy2;
-            }
-
-
-
-
-
-
-
-
-
+            EndPosY = Math.Truncate(EndPosY);
+            StartPosY = Math.Truncate(StartPosY);
 
             Ordinates.Foreground = Brushes.White;
-            Ordinates.Text = $"fulcrumCoordinates: {Math.Round(fulcrumCoordinates[0], 1)}; {Math.Round(fulcrumCoordinates[1], 1)}; {Math.Round(fulcrumCoordinates[2], 1)}\n" +
-                $"fulcrum: {Math.Round(vec.X, 1)}; {Math.Round(vec.Y, 1)}\n" +
-                $"p-oint: {Math.Round(fulc.X1, 1)}; {Math.Round(fulc.Y1, 1)}"+
-                $"vector: {Math.Round(vector.X, 1)}; {Math.Round(vector.Y, 1)}";
+            Ordinates.Text = $"Y: {Math.Round(coordinates[36].Y1, 2)}\n" +
+                             $"Z: {Math.Round(coordinates[36].Z1, 2)}\n\n" +
+                             $"Sart: {Math.Truncate(StartPosY)} | End: {Math.Truncate(EndPosY)}";
+
         }
+
+
+
 
 
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            StartPosY = Y_Zero;
+
+            NewPosY = Y_Zero;
+
+            if (Z_Zero-20 > 0) EndPosY = Y_Zero - 14.0;
+            else EndPosY = Y_Zero + 14.0;
+
+            EndPosY = Math.Truncate(EndPosY);
+            StartPosY = Math.Truncate(StartPosY);
+
+            if (EndPosY > StartPosY)
+            {
+                timer.Tick -= Timer_TickFront;
+                timer.Tick -= Timer_TickBack;
+
+                timer.Tick += Timer_TickFront;
+            }
+            else
+            {
+                timer.Tick -= Timer_TickFront;
+                timer.Tick -= Timer_TickBack;
+
+                timer.Tick += Timer_TickBack;
+            }
+
+            ORDT.Foreground = Brushes.White;
+            ORDT.Text += $"\nStart: {Math.Round(StartPosY, 1)} | End: {Math.Round(EndPosY, 1)} | Z_Zero: {Math.Round(Z_Zero, 2)}";
+
+            timer.Start();
+
+        }
+
+        double k = 0.01;
+
+        /// <summary>
+        /// ВПРАВО
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Timer_TickFront(object sender, object e)
+        {
+            NewPosY = Y_Zero;
+            NewPosY = Math.Truncate(NewPosY);
+
+            if ((Math.Round(NewPosY) == Math.Round(EndPosY)) && Z_Zero > 0)
+            {
+                ORDT.Text = "Front";
+
+                timer.Tick -= Timer_TickBack;
+                timer.Tick -= Timer_TickFront;
+
+                NewPosY = EndPosY;
+                EndPosY = StartPosY;
+                StartPosY = NewPosY;
 
 
+                timer.Tick += Timer_TickBack;
+            }
+            else
+            {
+                SwingX(-0.02);
+                RotateElementX(0, vector);
+            }
+            
+        }
 
+        /// <summary>
+        /// ВЛЕВО
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Timer_TickBack(object sender, object e)
+        {
+            NewPosY = Y_Zero;
+            NewPosY = Math.Truncate(NewPosY);
 
+            if ((Math.Round(NewPosY) == Math.Round(EndPosY)) && Z_Zero < 0)
+            {
+                ORDT.Text = "Back";
+
+                timer.Tick -= Timer_TickBack;
+                timer.Tick -= Timer_TickFront;
+
+                NewPosY = EndPosY;
+                EndPosY = StartPosY;
+                StartPosY = NewPosY;
+
+                
+
+                timer.Tick += Timer_TickFront;
+            }
+            else
+            {
+                SwingX(0.02);
+                RotateElementX(0, vector);
+            }
         }
 
         private void Input_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            
-            SwingX(input.Value, ref fulcrum);
-           
+            timer.Tick -= Timer_TickFront;
+            timer.Tick -= Timer_TickBack;
+
+            SwingX(input.Value);
+            RotateElementX(0, vector);
         }
 
 

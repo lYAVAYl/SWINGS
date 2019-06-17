@@ -602,11 +602,16 @@
             FontSize="16" Click="Button_Click"  
             />
         <Slider x:Name="input"
-            Canvas.Left="47" Canvas.Top="31" 
-            Height="26" Width="230"
-            Minimum="0" Maximum="0.015"
+            Canvas.Left="53" Canvas.Top="79" 
+            Height="26" Width="782"
+            Minimum="0" Maximum="0.01"
             TickPlacement="BottomRight" ValueChanged="Input_ValueChanged"    
             />
+        <TextBlock x:Name="ORDT"
+            TextWrapping="Wrap" 
+            Text="" Canvas.Left="721" Canvas.Top="11" 
+            Height="61" Width="364" 
+                   />
 
 
 
